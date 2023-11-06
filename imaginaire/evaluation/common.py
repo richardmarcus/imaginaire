@@ -302,6 +302,7 @@ def get_activations(data_loader, key_real, key_fake,
         # Preprocess the data.
         if preprocess is not None:
             data = preprocess(data)
+        
         # Load real data if the generator is not specified.
         if generator is None:
             images = data[key_real]
@@ -309,6 +310,11 @@ def get_activations(data_loader, key_real, key_fake,
             # Compute the generated image.
             net_G_output = generator(data, **kwargs)
             images = net_G_output[key_fake]
+        
+        #convert images from greyscale to RGB
+        if images.shape[1] == 1:
+            images = images.repeat(1, 3, 1, 1)
+            
         # Clamp the image for models that do not set the output to between
         # -1, 1. For models that employ tanh, this has no effect.
         images.clamp_(-1, 1)

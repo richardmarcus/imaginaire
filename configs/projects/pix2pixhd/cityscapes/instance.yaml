@@ -1,12 +1,12 @@
 # How often do you want to save output images during training.
-image_save_iter: 1000
+image_save_iter: 8000
 # How often do you want to save trained models.
 snapshot_save_iter: 2000
-snapshot_save_start_iter: 30000 
+snapshot_save_start_iter: 3000
 # How often do you want to log the training stats.
 logging_iter: 1000
 # Number of training epochs.
-max_epoch: 100
+max_epoch: 20
 
 # trainer options
 trainer:
@@ -111,11 +111,11 @@ data:
     full_data_ops: imaginaire.model_utils.label::make_one_hot, imaginaire.model_utils.label::concat_labels
     use_dont_care: False
     one_hot_num_classes:
-        lidar_seg: 20
+        lidar_seg: 1
     input_labels:
         - lidar_seg
-        - lidar_depth8
-        - color_big
+#        - lidar_depth8
+#        - color_big
         - lidar_inst
     input_image:
          - images
@@ -193,11 +193,11 @@ test_data:
     full_data_ops: imaginaire.model_utils.label::make_one_hot, imaginaire.model_utils.label::concat_labels
     use_dont_care: False
     one_hot_num_classes:
-        lidar_seg: 20
+        lidar_seg: 1
     input_labels:
         - lidar_seg
-        - lidar_depth8
-        - color_big
+#      - lidar_depth8
+#        - color_big
         - lidar_inst
         
     

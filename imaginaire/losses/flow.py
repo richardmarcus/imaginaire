@@ -78,6 +78,7 @@ class FlowLoss(nn.Module):
         """
         tgt_label, tgt_image = data['label'], data['image']
 
+
         fake_image = net_G_output['fake_images']
         warped_images = net_G_output['warped_images']
         flow = net_G_output['fake_flow_maps']
@@ -110,7 +111,7 @@ class FlowLoss(nn.Module):
                     data['real_prev_image'] is not None:
                 # Compute GT for warping previous -> target.
                 tgt_image_prev = data['real_prev_image']
-                flow_gt_prev, conf_gt_prev = self.flowNet(tgt_image,
+                flow_gt_prev, conf_gt_prev = self.flowNet(data['col_image'],
                                                           tgt_image_prev)
 
         flow_gt = [flow_gt_ref, flow_gt_prev]

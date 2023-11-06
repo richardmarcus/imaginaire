@@ -1,15 +1,15 @@
 # How often do you want to save output images during training.
 image_save_iter: 50
 # How often do you want to save trained models.
-snapshot_save_epoch: 1
+snapshot_save_epoch: 5
 # How often do you want to log the training stats.
 logging_iter: 100
 # Number of training epochs.
-max_epoch: 20
+max_epoch: 80
 # Number of epochs training single frame generator.
-single_frame_epoch: 10
+single_frame_epoch: 0
 # How often to double the number of training frames in each clip.
-num_epochs_temporal_step: 1
+num_epochs_temporal_step: 20
 
 # Trainer options.
 trainer:
@@ -17,7 +17,7 @@ trainer:
     amp_config:
         enabled: True
     model_average_config:
-        enabled: False
+        enabled: True
         beta: 0.999
         start_iteration: 500
         num_batch_norm_estimation_iterations: 0
@@ -67,10 +67,10 @@ dis_opt:
 # Model options.
 gen:  
     type: imaginaire.generators.vid2vid
-    num_layers: 5
+    num_layers: 7
     num_downsamples_img: 3
-    num_filters: 16
-    max_num_filters: 512
+    num_filters: 32
+    max_num_filters: 1024
     kernel_size: 3    
     activation_norm_type: spatially_adaptive
     activation_norm_params:
@@ -81,8 +81,8 @@ gen:
     style_dims: 256
     use_segmap_as_input: True
     flow:            
-        num_filters: 16
-        max_num_filters: 512
+        num_filters: 32
+        max_num_filters: 1024
         num_downsamples: 4
         num_res_blocks: 6
         activation_norm_type: instance
@@ -93,14 +93,14 @@ gen:
             num_layers: 3
             embed:
                 arch: unet
-                num_filters: 16
+                num_filters: 32
                 num_downsamples: 4
                 kernel_size: 3                
                 weight_norm_type: spectral
     embed:
         use_embed: True
         arch: encoderdecoder
-        num_filters: 16
+        num_filters: 32
         num_downsamples: 4
         kernel_size: 3
         weight_norm_type: spectral
@@ -108,15 +108,14 @@ gen:
 dis:
     type: imaginaire.discriminators.fs_vid2vid
     image:
-        num_filters: 32
-        max_num_filters: 256
+        num_filters: 64
+        max_num_filters: 512
         num_discriminators: 2
         num_layers: 3
         weight_norm_type: none
         activation_norm_type: instance    
 flow_network:
     type: imaginaire.third_party.flow_net.flow_net
-
 
 data:    
     name: 'cityscapes'    
@@ -128,71 +127,45 @@ data:
     input_types:
         - images:
             ext: png
-            num_channels: 1
+            num_channels: 3
             normalize: True
-        - lidar_depth8:
-            ext: png
-            num_channels: 1
-            normalize: True
-        - lidar_seg:
+        - seg_maps:
             ext: png
             num_channels: 1
             is_mask: True
             normalize: False
-        - color_big:
-            ext: png
-            num_channels: 3
-            normalize: True
-        - color:
-            ext: png
-            num_channels: 3
-            normalize: True
- #       - lidar_inst:
- #           ext: png
- #           num_channels: 1
- #           is_mask: True
- #           normalize: False
 
     full_data_ops: imaginaire.model_utils.label::make_one_hot, imaginaire.model_utils.label::concat_labels
     use_dont_care: False
     one_hot_num_classes:
-        lidar_seg: 20 
+        seg_maps: 35
     input_labels:
-
-        - lidar_seg
-        - lidar_depth8
-        - color
-        #- color_big
-        #- lidar_inst
+        - seg_maps
 
     input_image:
         - images
 
-
-    train:        
+    train:   
+        is_lmdb: False     
         roots:
-            #- ../../../Datasets/cityscapes/train 
-            - ../../../Datasets/kitti-step/all_train/0000
-            - ../../../Datasets/kitti-step/all_train/0003
-            - ../../../Datasets/kitti-step/all_train/0004
-
-
+            #- datasets/cityscapes/lmdb/train
+            - ../../../Datasets/cityscapes/train 
         batch_size: 1
         initial_sequence_length: 4
         max_sequence_length: 16        
         augmentations:
-            resize_smallest_side: 128
-            random_scale_limit: 0.1
-            horizontal_flip: False
-            random_crop_h_w: 128, 512  
-    val:        
+            resize_smallest_side: 256
+            random_scale_limit: 0.2
+            horizontal_flip: True
+            random_crop_h_w: 256, 512
+    val:   
+        is_lmdb: False     
         roots:
-            #- ../../../Datasets/cityscapes/train
-            - ../../../Datasets/kitti-step/all_val/0001   
-           # - ../../../Datasets/kitti-step/all_val/0020  
+            #- datasets/cityscapes/lmdb/val
+            - ../../../Datasets/cityscapes/train 
         batch_size: 1        
-        augmentations:
-            resize_h_w: 128, 512
+        augmentations:            
+            resize_h_w: 256, 512
             horizontal_flip: False
 
 # Inference options.
@@ -204,43 +177,32 @@ test_data:
     num_workers: 4
     paired: True    
     input_types:
-        - images:
-            ext: png
-            num_channels: 1
-            normalize: True
-        - color_big:
-            ext: png
-            num_channels: 3
-            normalize: True
-        - lidar_seg:
+        - seg_maps:
             ext: png
             num_channels: 1
             is_mask: True
             normalize: False
-
+        - images:
+            ext: png
+            num_channels: 3
+            normalize: True
 
     full_data_ops: imaginaire.model_utils.label::make_one_hot, imaginaire.model_utils.label::concat_labels
     use_dont_care: False
     one_hot_num_classes:
-        lidar_seg: 20 
+        seg_maps: 35
     input_labels:
-        - lidar_seg
-        - lidar_depth8
-        - color_big
-        - lidar_inst
+        - seg_maps
 
     input_image:
-         - images
-
+        - images
 
     test:
         is_lmdb: False
         roots:
-            #- projects/pix2pixhd/test_data/cityscapes_test
-            - ../../../Datasets/kitti-step/all_val/0001  
-            #- ../../../Datasets/kitti-step/all_val/0020          
+            - ../../../Datasets/cityscapes/train            
+            #- projects/vid2vid/test_data/cityscapes
         batch_size: 1        
-        augmentations:
-            #resize_h_w: 512, 1024
-            resize_h_w: 128, 512
+        augmentations:            
+            resize_h_w: 256, 512
             horizontal_flip: False

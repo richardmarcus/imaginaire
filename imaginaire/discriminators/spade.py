@@ -73,6 +73,7 @@ class Discriminator(nn.Module):
     def _single_forward(self, input_label, input_image):
         # Compute discriminator outputs and intermediate features from input
         # images and semantic labels.
+        #print(input_label.shape, input_image.shape)
         input_x = torch.cat(
             (input_label, input_image), 1)
         output_list = []

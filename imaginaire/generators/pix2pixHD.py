@@ -58,7 +58,7 @@ class Generator(nn.Module):
         # Check whether label input contains specific type of data (e.g.
         # instance_maps).
         self.contain_instance_map = False
-        if data_cfg.input_labels[-1] == 'instance_maps':
+        if data_cfg.input_labels[-1] == 'lidar_inst':
             self.contain_instance_map = True
         # The feature encoder is only useful when the instance map is provided.
         if hasattr(gen_cfg, 'enc') and self.contain_instance_map:
@@ -106,11 +106,16 @@ class Generator(nn.Module):
         Returns:
             output (dict) : Dictionary of output data.
         """
+
+        #if data is a dictionary, then it contains images and labels
+        #if isinstance(data, dict):
         label = data['label']
+        #else:
+        #label = data
 
         output = dict()
         if self.concat_features:
-            features = self.encoder(data['images'], data['instance_maps'])
+            features = self.encoder(data['images'], data['lidar_inst'])
             label = torch.cat([label, features], dim=1)
             output['feature_maps'] = features
 
@@ -158,7 +163,7 @@ class Generator(nn.Module):
             file_names (str): Data file name.
         """
         output = self.forward(data, **kwargs)
-        return output['fake_images'], data['key']['seg_maps'][0]
+        return output['fake_images'], data['key']['lidar_seg'][0]
 
 
 class LocalEnhancer(nn.Module):

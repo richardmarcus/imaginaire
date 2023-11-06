@@ -36,6 +36,7 @@ def compute_fid(fid_path, data_loader, net_G,
     Returns:
         (float): FID value.
     """
+    
     print('Computing FID.')
     act_path = os.path.join(os.path.dirname(fid_path),
                             'activations_real.npy')
@@ -86,6 +87,7 @@ def compute_fid_data(fid_path, data_loader_a, data_loader_b,
         (float): FID value.
     """
     print('Computing FID.')
+
     path_a = os.path.join(os.path.dirname(fid_path),
                           'activations_a.npy')
     min_data_size = min(len(data_loader_a.dataset),

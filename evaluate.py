@@ -25,7 +25,7 @@ def parse_args():
     parser.add_argument('--config',
                         help='Path to the training config file.', required=True)
     parser.add_argument('--logdir', help='Dir for saving evaluation results.')
-    parser.add_argument('--checkpoint', default='', help='Checkpoint path.')
+    parser.add_argument('--checkpoint', default=None, help='Checkpoint path.')
     parser.add_argument('--checkpoint_logdir', help='Dir for loading models.')
     parser.add_argument('--seed', type=int, default=0, help='Random seed.')
     parser.add_argument('--local_rank', type=int, default=os.getenv('LOCAL_RANK', 0))
@@ -96,12 +96,13 @@ def main():
                    config=cfg,
                    name=os.path.basename(cfg.logdir),
                    resume="allow",
-                   settings=wandb.Settings(start_method="fork"),
+                   settings=wandb.Settings(start_method="thread"),
                    mode=wandb_mode)
         wandb.config.update({'dataset': cfg.data.name})
         wandb.watch(trainer.net_G_module)
         wandb.watch(trainer.net_D.module)
 
+  
     # Start evaluation.
     if args.checkpoint is not None:
         checkpoint = args.checkpoint
@@ -111,8 +112,9 @@ def main():
         trainer.write_metrics()
     else:
         checkpoints = sorted(glob.glob('{}/*.pt'.format(args.checkpoint_logdir)))
+
         for checkpoint in checkpoints:
-            # current_iteration = int(os.path.basename(checkpoint).split('_')[3])
+            current_iteration = int(os.path.basename(checkpoint).split('_')[3])
             if args.start_iter <= current_iteration <= args.end_iter:
                 print(f"Evaluating the model at iteration {current_iteration}.")
                 _, current_epoch, current_iteration = trainer.load_checkpoint(cfg, checkpoint, resume=True)

@@ -80,6 +80,8 @@ class Generator(BaseNetwork):
         crop_h, crop_w = crop_h_w.split(',')
         crop_h, crop_w = int(crop_h), int(crop_w)
         # Spatial size at the bottle neck of generator.
+        #print(num_layers, 2**num_layers, crop_h, crop_w, crop_h // (2 ** num_layers), crop_w // (2 ** num_layers))
+        #exit()
         self.sh = crop_h // (2 ** num_layers)
         self.sw = crop_w // (2 ** num_layers)
 

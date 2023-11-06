@@ -45,7 +45,7 @@ def cluster_features(cfg, train_data_loader, net_E,
         if preprocess is not None:
             data = preprocess(data)
         feat = encode_features(net_E, feat_nc, label_nc,
-                               data['images'], data['instance_maps'],
+                               data['images'], data['lidar_inst'],
                                is_cityscapes)
         # We only collect the feature vectors for the master GPU.
         if is_master():

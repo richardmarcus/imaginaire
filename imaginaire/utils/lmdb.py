@@ -145,11 +145,12 @@ def create_metadata(data_root=None, cfg=None, paired=None, input_list=''):
     cfg = get_lmdb_data_types(cfg)
 
     # Get list of all data_types in the dataset.
+    print(data_root)
     available_data_types = path.get_immediate_subdirectories(data_root)
-    print(available_data_types)
+
     required_data_types = cfg.data.data_types
     data_exts = cfg.data.extensions
-
+    print(available_data_types, required_data_types, data_root)
     # Find filenames.
     assert set(required_data_types).issubset(set(available_data_types)), \
         print(set(required_data_types) - set(available_data_types), 'missing')

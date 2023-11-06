@@ -209,7 +209,7 @@ class Trainer(Vid2VidTrainer):
         labels = split_labels(data['label'], label_lengths)
         vis_labels = []
         for key, value in labels.items():
-            if key == 'seg_maps':
+            if key == 'lidar_seg':
                 vis_labels.append(self.visualize_label(value[:, -1]))
             else:
                 vis_labels.append(tensor2im(value[:, -1]))
@@ -365,7 +365,7 @@ class Trainer(Vid2VidTrainer):
         labels = split_labels(data['label'], label_lengths)
         vis_labels_start, vis_labels_end = [], []
         for key, value in labels.items():
-            if 'seg_maps' in key:
+            if 'lidar_seg' in key:
                 vis_labels_start.append(self.visualize_label(value[:, -1]))
                 vis_labels_end.append(self.visualize_label(value[:, 0]))
             else:

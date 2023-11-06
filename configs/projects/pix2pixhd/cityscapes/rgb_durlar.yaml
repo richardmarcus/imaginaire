@@ -1,8 +1,8 @@
 # How often do you want to save output images during training.
-image_save_iter: 1000
+image_save_iter: 8000
 # How often do you want to save trained models.
 snapshot_save_iter: 2000
-snapshot_save_start_iter: 30000 
+snapshot_save_start_iter: 3000
 # How often do you want to log the training stats.
 logging_iter: 1000
 # Number of training epochs.
@@ -88,20 +88,11 @@ data:
             ext: png
             num_channels: 1
             normalize: True
-        - color_big:
+        - ambient:
             ext: png
             num_channels: 3
             normalize: True
-        - lidar_depth8:
-            ext: png
-            num_channels: 1
-            normalize: True
         - lidar_seg:
-            ext: png
-            num_channels: 1
-            is_mask: True
-            normalize: False
-        - lidar_inst:
             ext: png
             num_channels: 1
             is_mask: True
@@ -111,34 +102,20 @@ data:
     full_data_ops: imaginaire.model_utils.label::make_one_hot, imaginaire.model_utils.label::concat_labels
     use_dont_care: False
     one_hot_num_classes:
-        lidar_seg: 20
+        lidar_seg: 1
     input_labels:
         - lidar_seg
-        - lidar_depth8
-        - color_big
-        - lidar_inst
+#        - lidar_depth8
+        - ambient
+#        - lidar_inst
     input_image:
          - images
   
     # Train dataset details.
     train:        
         roots:
-            - ../../../Datasets/kitti-step/all_train/0000
-            - ../../../Datasets/kitti-step/all_train/0003
-            - ../../../Datasets/kitti-step/all_train/0004
-            - ../../../Datasets/kitti-step/all_train/0005
-            - ../../../Datasets/kitti-step/all_train/0007
-            - ../../../Datasets/kitti-step/all_train/0008
-            - ../../../Datasets/kitti-step/all_train/0009
-            - ../../../Datasets/kitti-step/all_train/0010
-            - ../../../Datasets/kitti-step/all_train/0011
-            - ../../../Datasets/kitti-step/all_train/0012
-            - ../../../Datasets/kitti-step/all_train/0013
-            - ../../../Datasets/kitti-step/all_train/0014
-            - ../../../Datasets/kitti-step/all_train/0015
-            - ../../../Datasets/kitti-step/all_train/0016
-            - ../../../Datasets/kitti-step/all_train/0017
-            - ../../../Datasets/kitti-step/all_train/0019
+            - B:/Datasets/Ouster_M/DurLAR_20210716_M/DurLAR_20210716_M/cropped/train
+
 
         batch_size: 8
         augmentations:
@@ -150,11 +127,8 @@ data:
     # Validation dataset details.
     val:        
         roots:
-            - ../../../Datasets/kitti-step/all_val/0002 
-            - ../../../Datasets/kitti-step/all_val/0006
-            - ../../../Datasets/kitti-step/all_val/0018
-            - ../../../Datasets/kitti-step/all_val/0001  
-            - ../../../Datasets/kitti-step/all_val/0020  
+            - B:/Datasets/Ouster_M/DurLAR_20210716_M/DurLAR_20210716_M/cropped/val
+            
         batch_size: 1        
         augmentations:
             resize_h_w: 64, 512
@@ -169,45 +143,34 @@ test_data:
     type: imaginaire.datasets.paired_images    
     num_workers: 4
     input_types:
-        - color_big:
+        - gray:
             ext: png
             num_channels: 3
-            normalize: True
-        - lidar_depth8:
-            ext: png
-            num_channels: 1
             normalize: True
         - lidar_seg:
             ext: png
             num_channels: 1
             is_mask: True
             normalize: False
-        - lidar_inst:
-            ext: png
-            num_channels: 1
-            is_mask: True
-            normalize: False
-
 
 
     full_data_ops: imaginaire.model_utils.label::make_one_hot, imaginaire.model_utils.label::concat_labels
     use_dont_care: False
     one_hot_num_classes:
-        lidar_seg: 20
+        lidar_seg: 1
     input_labels:
         - lidar_seg
-        - lidar_depth8
-        - color_big
-        - lidar_inst
+#      - lidar_depth8
+        - gray
+ #       - lidar_inst
         
     
     paired: True    
     test:
         is_lmdb: False
         roots:
-            - ../../../Datasets/kitti-step/all_val/0001
-            - ../../../Datasets/kitti-step/VKITTI/0001
-
+            #- B:/Datasets/Ouster_M/DurLAR_20210716_M/DurLAR_20210716_M/cropped/val
+            - B:/Datasets/kitti-step/VKITTI/0001/
      
         batch_size: 1        
         augmentations:

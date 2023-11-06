@@ -704,12 +704,15 @@ class Trainer(BaseTrainer):
         else:
             prev_labels = prev_images = None
 
+
         data_t = dict()
         data_t['label'] = label
         data_t['image'] = image
         data_t['prev_labels'] = prev_labels
         data_t['prev_images'] = prev_images
-        data_t['real_prev_image'] = data['images'][:, t - 1] if t > 0 else None
+        data_t['col_image'] = data['color_big'][:, t]
+        #data_t['real_prev_image'] = data['images'][:, t - 1] if t > 0 else None
+        data_t['real_prev_image'] = data['color_big'][:, t - 1] if t > 0 else None
         return data_t
 
     def _end_of_iteration(self, data, current_epoch, current_iteration):
@@ -796,10 +799,10 @@ class Trainer(BaseTrainer):
         if hasattr(cfgdata, 'for_pose_dataset'):
             label = tensor2pose(self.cfg, label)
         elif hasattr(cfgdata, 'input_labels') and \
-                'seg_maps' in cfgdata.input_labels:
+                'lidar_seg' in cfgdata.input_labels:
             for input_type in cfgdata.input_types:
-                if 'seg_maps' in input_type:
-                    num_labels = cfgdata.one_hot_num_classes.seg_maps
+                if 'lidar_seg' in input_type:
+                    num_labels = cfgdata.one_hot_num_classes.lidar_seg
             label = tensor2label(label, num_labels)
         elif getattr(cfgdata, 'label_channels', 1) > 3:
             label = tensor2im(label.sum(1, keepdim=True))
@@ -831,7 +834,7 @@ class Trainer(BaseTrainer):
         labels = split_labels(data['label'], label_lengths)
         vis_labels_start, vis_labels_end = [], []
         for key, value in labels.items():
-            if key == 'seg_maps':
+            if key == 'lidar_seg':
                 vis_labels_start.append(self.visualize_label(value[:, -1]))
                 vis_labels_end.append(self.visualize_label(value[:, 0]))
             else:
@@ -863,7 +866,9 @@ class Trainer(BaseTrainer):
 
                 if self.use_flow:
                     flow_gt, conf_gt = self.criteria['Flow'].flowNet(
-                        data['images'][:, -1], data['images'][:, -2])
+         #               data['images'][:, -1], data['images'][:, -2])
+          #          warped_image_gt = resample(data['images'][:, -1], flow_gt)
+                    data['color_big'][:, -1], data['color_big'][:, -2])
                     warped_image_gt = resample(data['images'][:, -1], flow_gt)
                     vis_images_first += [
                         tensor2flow(flow_gt),

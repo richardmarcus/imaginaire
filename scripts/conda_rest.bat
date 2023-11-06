@@ -1,10 +1,3 @@
-@ECHO OFF
-FOR /F "tokens=*" %%g IN ('nvcc --version') do (set ver=%%g)
-
-echo %ver%
-set CUDA_VERSION=%ver:~11,4%
-echo %CUDA_VERSION%
-
 
 echo %cd%
 set curr_directory=%cd%

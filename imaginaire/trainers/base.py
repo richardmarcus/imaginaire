@@ -6,12 +6,15 @@ import json
 import os
 import time
 
+import numpy as np
+
 import torch
 import torchvision
 import wandb
 from torch.cuda.amp import GradScaler, autocast
 from tqdm import tqdm
-
+import onnx
+import onnxruntime
 from imaginaire.utils.distributed import is_master, master_only
 from imaginaire.utils.distributed import master_only_print as print
 from imaginaire.utils.io import save_pilimage_in_jpeg
@@ -20,7 +23,8 @@ from imaginaire.utils.misc import to_cuda, to_device, requires_grad, to_channels
 from imaginaire.utils.model_average import (calibrate_batch_norm_momentum,
                                             reset_batch_norm)
 from imaginaire.utils.visualization import tensor2pilimage
-
+from imaginaire.utils.misc import split_labels, to_device
+from imaginaire.utils.visualization import tensor2label
 
 class BaseTrainer(object):
     r"""Base trainer. We expect that all trainers inherit this class.
@@ -149,10 +153,10 @@ class BaseTrainer(object):
                 self.credentials = json.load(fin)
         else:
             self.credentials = None
-
-        if 'TORCH_HOME' not in os.environ:
-            os.environ['TORCH_HOME'] = os.path.join(
-                os.environ['HOME'], ".cache")
+        #print(os.environ)
+        #if 'TORCH_HOME' not in os.environ:
+        #    os.environ['TORCH_HOME'] = os.path.join(
+        #        os.environ['HOME'], ".cache")
 
     def _init_tensorboard(self):
         r"""Initialize the tensorboard. Different algorithms might require
@@ -277,6 +281,7 @@ class BaseTrainer(object):
             resume = False
             return resume, current_epoch, current_iteration
         # Load checkpoint
+        print(checkpoint_path)
         checkpoint = torch.load(
             checkpoint_path, map_location=lambda storage, loc: storage)
         current_epoch = 0
@@ -427,12 +432,12 @@ class BaseTrainer(object):
 
         # Compute metrics.
         if current_iteration % self.cfg.metrics_iter == 0:
-            self.save_image(self._get_save_path('images', 'jpg'), data)
+            self.save_image(self._get_save_path('images', 'png'), data)
             self.write_metrics()
 
         # Compute image to be saved.
         elif current_iteration % self.cfg.image_save_iter == 0:
-            self.save_image(self._get_save_path('images', 'jpg'), data)
+            self.save_image(self._get_save_path('images', 'png'), data)
         elif current_iteration % self.cfg.image_display_iter == 0:
             image_path = os.path.join(self.cfg.logdir, 'images', 'current.jpg')
             self.save_image(image_path, data)
@@ -537,8 +542,15 @@ class BaseTrainer(object):
         self.net_G.eval()
         vis_images = self._get_visualizations(data)
         if is_master() and vis_images is not None:
+            #image list
+            image_list = []
+            for img in vis_images:
+                    if img.shape[1] == 1:
+                        img = img.repeat(1,3,1,1)
+                    image_list.append(img)
+            
             vis_images = torch.cat(
-                [img for img in vis_images if img is not None], dim=3).float()
+               image_list, dim=3).float()
             vis_images = (vis_images + 1) / 2
             print('Save output images to {}'.format(path))
             vis_images.clamp_(0, 1)
@@ -822,6 +834,58 @@ class BaseTrainer(object):
     def _extra_dis_step(self, data):
         pass
 
+
+    #onnx export
+    def export_onnx(self,data_loader, inference_args):
+
+        #get generator model
+        if self.cfg.trainer.model_average_config.enabled:
+            net_G = self.net_G.module.averaged_model
+        else:
+            net_G = self.net_G.module
+        net_G.eval()
+
+        for it, data in enumerate((data_loader)):
+            data = self.start_of_iteration(data, current_iteration=-1)
+            input_names = list(data['key'].keys())
+            #print(input_names)
+            #get dynamic axes from input names
+            dynamic_axes = {key: {0: 'batch_size'} for key in input_names}
+            #output names is generic
+            output_names = ['output']
+            #add dynamic axes for output
+            dynamic_axes['output'] = {0: 'batch_size'}
+            with torch.no_grad():
+                #there are different keys in data, we only need the 'label' key
+                data  = data['label']
+                #make data to a dict with key 'label
+                #data = {'label': data}
+            
+                #output, file_names = \
+                #net_G.inference(data, **vars(inference_args))
+                #export to onnx
+                torch.onnx.export(net_G, data, "generator.onnx", 
+                                verbose=False, input_names=input_names, output_names=output_names,
+                                opset_version=10, do_constant_folding=False, 
+                                dynamic_axes=dynamic_axes)
+                break
+                onnx_model = onnx.load("generator.onnx")
+                onnx.checker.check_model(onnx_model)
+
+                ort_session = onnxruntime.InferenceSession("generator.onnx",
+                                                           providers = ["CUDAExecutionProvider"])
+                def to_numpy(tensor):
+                    return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
+                ort_inputs = {ort_session.get_inputs()[0].name: to_numpy(data)}
+                ort_outs = ort_session.run(None, ort_inputs)
+                # compare ONNX Runtime and PyTorch results
+                np.testing.assert_allclose(to_numpy(output), ort_outs[0], rtol=1e-03, atol=1e-05)
+            print('one iteration done')
+            break
+        print ("Exported model has been tested with ONNXRuntime, and the result looks good!")
+
+
+
     def test(self, data_loader, output_dir, inference_args):
         r"""Compute results images for a batch of input data and save the
         results in the specified folder.
@@ -843,10 +907,48 @@ class BaseTrainer(object):
                 output_images, file_names = \
                     net_G.inference(data, **vars(inference_args))
             for output_image, file_name in zip(output_images, file_names):
-                fullname = os.path.join(output_dir, file_name + '.jpg')
+                fullname = os.path.join(output_dir, file_name + '.png')
+                path = fullname.replace(file_name, file_name+'_input')
                 output_image = tensor2pilimage(output_image.clamp_(-1, 1),
                                                minus1to1_normalized=True)
                 save_pilimage_in_jpeg(fullname, output_image)
+ #           self.recalculate_batch_norm_statistics(
+ #               data_loader)
+            with torch.no_grad():
+                label_lengths = data_loader.dataset.get_label_lengths()
+                labels = split_labels(data['label'], label_lengths)
+                # Get visualization of the segmentation mask.
+                vis_images = list()
+                net_G_output = self.net_G(data, random_style=True)
+                # print(labels.keys())
+                #vis_images.append(net_G_output['fake_images'])
+                for key in labels.keys():
+                    if 'seg' in key:
+                        segmaps = tensor2label(labels[key], label_lengths[key], output_normalized_tensor=True)
+                        segmaps = torch.cat([x.unsqueeze(0) for x in segmaps], 0)
+                        vis_images.append(segmaps)
+                    elif 'edge' in key:
+                        edgemaps = torch.cat((labels[key], labels[key], labels[key]), 1)
+                        vis_images.append(edgemaps)
+                    else:
+                        vis_images.append(labels[key])
+
+                image_list = []
+                for img in vis_images:
+                        if img.shape[1] == 1:
+                            img = img.repeat(1,3,1,1)
+                        image_list.append(img)
+            
+                vis_images = torch.cat(
+                    image_list, dim=3).float()
+                vis_images = (vis_images + 1) / 2
+                print('Save output images to {}'.format(path))
+                vis_images.clamp_(0, 1)
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                image_grid = torchvision.utils.make_grid(
+                    vis_images, nrow=1, padding=0, normalize=False)
+
+                #torchvision.utils.save_image(image_grid, path, nrow=1)
 
     def _get_total_loss(self, gen_forward):
         r"""Return the total loss to be backpropagated.

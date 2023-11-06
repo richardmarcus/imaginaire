@@ -151,7 +151,7 @@ class Trainer(SPADETrainer):
         if net_G.contain_instance_map:
             inst_maps = data['label'][:, -1:]
             edge_maps = get_edges(inst_maps)
-            data['instance_maps'] = inst_maps.clone()
+            data['lidar_inst'] = inst_maps.clone()
             data['label'][:, -1:] = edge_maps
         return data
 

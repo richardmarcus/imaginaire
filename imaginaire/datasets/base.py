@@ -115,6 +115,8 @@ class BaseDataset(data.Dataset):
         self.post_aug_ops = {}  # Ops on data type after augmentation.
 
         # Extract info from data types.
+
+
         for data_type in self.cfgdata.input_types:
             name = list(data_type.keys())
             assert len(name) == 1

@@ -6,6 +6,8 @@ import argparse
 import os
 import sys
 import random
+#print torch version
+
 
 import torch.autograd.profiler as profiler
 import wandb
@@ -113,7 +115,7 @@ def main():
                    config=cfg,
                    name=os.path.basename(cfg.logdir),
                    resume="allow",
-                   settings=wandb.Settings(start_method="fork"),
+                   settings=wandb.Settings(start_method="thread"),
                    mode=wandb_mode)
         wandb.config.update({'dataset': cfg.data.name})
         wandb.watch(trainer.net_G_module)

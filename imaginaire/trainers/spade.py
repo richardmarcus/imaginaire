@@ -17,7 +17,7 @@ from imaginaire.utils.model_average import reset_batch_norm, \
     calibrate_batch_norm_momentum
 from imaginaire.utils.misc import split_labels, to_device
 from imaginaire.utils.visualization import tensor2label
-
+from imaginaire.model_utils.pix2pixHD import get_edges
 
 class Trainer(BaseTrainer):
     r"""Initialize SPADE trainer.
@@ -90,6 +90,19 @@ class Trainer(BaseTrainer):
             current_iteration (int): The iteration number of the current batch.
         """
         data = to_device(data, 'cuda')
+        if self.cfg.trainer.model_average_config.enabled:
+            net_G = self.net_G.module.module
+        else:
+            net_G = self.net_G.module
+        if net_G.contain_instance_map:
+
+ 
+            inst_maps = data['label'][:, -1:]
+            edge_maps = get_edges(inst_maps)
+   
+            data['lidar_inst'] = inst_maps.clone()
+            data['label'][:, -1:] = edge_maps
+
         data = self._resize_data(data)
         return data
 
@@ -170,16 +183,19 @@ class Trainer(BaseTrainer):
             vis_images.append(data['images'])
             net_G_output = self.net_G(data, random_style=True)
             # print(labels.keys())
+            vis_images.append(net_G_output['fake_images'])
             for key in labels.keys():
                 if 'seg' in key:
                     segmaps = tensor2label(labels[key], label_lengths[key], output_normalized_tensor=True)
                     segmaps = torch.cat([x.unsqueeze(0) for x in segmaps], 0)
                     vis_images.append(segmaps)
-                if 'edge' in key:
+                elif 'edge' in key:
                     edgemaps = torch.cat((labels[key], labels[key], labels[key]), 1)
                     vis_images.append(edgemaps)
+                else:
+                    vis_images.append(labels[key])
 
-            vis_images.append(net_G_output['fake_images'])
+
             if self.cfg.trainer.model_average_config.enabled:
                 net_G_model_average_output = \
                     self.net_G.module.averaged_model(data, random_style=True)

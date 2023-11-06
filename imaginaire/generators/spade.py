@@ -122,6 +122,9 @@ class Generator(nn.Module):
             self.style_encoder = StyleEncoder(style_enc_cfg)
 
         self.z = None
+        self.contain_instance_map = False
+        if data_cfg.input_labels[-1] == 'lidar_inst':
+            self.contain_instance_map = True
         print('Done with the SPADE generator initialization.')
 
     def forward(self, data, random_style=False):
@@ -214,7 +217,7 @@ class Generator(nn.Module):
                 output_images, size=[height, width])
 
         for key in data['key'].keys():
-            if 'segmaps' in key or 'seg_maps' in key:
+            if 'lidar_seg' in key or 'lidar_seg' in key:
                 file_names = data['key'][key][0]
                 break
         for key in data['key'].keys():
@@ -412,6 +415,7 @@ class SPADEGenerator(nn.Module):
             [torch.arange(-1, 1.1, 2. / 15), torch.arange(-1, 1.1, 2. / 15)])
         self.xy = torch.cat((xv.unsqueeze(0), yv.unsqueeze(0)), 0).unsqueeze(0)
         self.xy = self.xy.cuda()
+
 
     def forward(self, data):
         r"""SPADE Generator forward.

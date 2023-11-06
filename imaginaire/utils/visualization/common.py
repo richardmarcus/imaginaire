@@ -54,15 +54,20 @@ def tensor2pilimage(image, width=None, height=None, minus1to1_normalized=False):
     Returns:
         (PIL image): The resulting PIL image.
     """
+    
+    xl = len(image.size())
+
+
     if len(image.size()) != 3:
         raise ValueError('Image tensor dimension does not equal = 3.')
-    if image.size(0) != 3:
-        raise ValueError('Image has more than 3 channels.')
+  #  if image.size(0) != 3:
+  #      raise ValueError('Image has more than 3 channels.')
     if minus1to1_normalized:
         # Normalize back to [0, 1]
         image = (image + 1) * 0.5
     image = image.detach().cpu().squeeze().numpy()
-    image = np.transpose(image, (1, 2, 0)) * 255
+    print(image.shape, xl)
+    image = np.transpose(image, (0, 1)) * 255
     output_img = Image.fromarray(np.uint8(image))
     if width is not None and height is not None:
         output_img = output_img.resize((width, height), Image.BICUBIC)
@@ -223,6 +228,7 @@ def labelcolormap(N):
     Args:
         N (int): Number of labels.
     """
+    N=100
     if N == 35:  # GTA/cityscape train
         cmap = np.array([(0, 0, 0), (0, 0, 0), (0, 0, 0), (0, 0, 0), (0, 0, 0),
                          (111, 74, 0), (81, 0, 81), (128, 64, 128),

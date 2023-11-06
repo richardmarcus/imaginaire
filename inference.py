@@ -82,11 +82,22 @@ def main():
         print('Checkpoint downloaded to', args.checkpoint)
 
     # Load checkpoint.
+
     trainer.load_checkpoint(cfg, args.checkpoint)
+
+
+
+  
+
+    
+
 
     # Do inference.
     trainer.current_epoch = -1
     trainer.current_iteration = -1
+    
+    #trainer.export_onnx(test_data_loader, cfg.inference_args)
+    #exit()
     trainer.test(test_data_loader, args.output_dir, cfg.inference_args)
 
 
